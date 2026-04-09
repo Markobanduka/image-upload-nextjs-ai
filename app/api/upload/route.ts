@@ -1,41 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { getUploadDirectory, sanitizeFolderName } from '@/lib/assets';
 
 export async function POST(request: NextRequest) {
     const data = await request.formData();
     const files = data.getAll('files') as File[];
-    const folder = data.get('folder') as string | null;
+    const folderValue = data.get('folder');
+    const folder = typeof folderValue === 'string' ? folderValue : '';
 
-    let uploadDir = path.join(process.cwd(), 'public', 'assets');
-    if (folder) {
-        uploadDir = path.join(uploadDir, folder);
+    if (!folder.trim()) {
+        return NextResponse.json({ error: 'Folder name is required.' }, { status: 400 });
     }
 
-    // Ensure the upload directory exists
+    let uploadDir;
+    try {
+        uploadDir = getUploadDirectory(folder);
+    } catch (error) {
+        return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    }
+
     await mkdir(uploadDir, { recursive: true });
 
-    const uploadedFiles = [];
+    const uploadedFiles: string[] = [];
 
     for (const file of files) {
         const buffer = Buffer.from(await file.arrayBuffer());
         const filename = file.name;
         const filepath = path.join(uploadDir, filename);
         await writeFile(filepath, buffer);
-        const urlPath = folder ? `/assets/${folder}/${filename}` : `/assets/${filename}`;
-        uploadedFiles.push(urlPath);
-    }
-
-    // Commit to git
-    try {
-        await execAsync('git add public/assets');
-        await execAsync('git commit -m "Add uploaded images"');
-    } catch (error) {
-        console.error('Git commit failed:', error);
+        const relativePath = path.join(folder.trim(), filename).replace(/\\/g, '/');
+        uploadedFiles.push(`/assets/${relativePath}`);
     }
 
     return NextResponse.json({ message: 'Files uploaded successfully', files: uploadedFiles });
