@@ -6,8 +6,9 @@ interface FolderPageProps {
     };
 }
 
-export default function FolderPage({ params }: FolderPageProps) {
-    const folderPath = (params?.folder ?? []).join('/');
+export default async function FolderPage({ params }: FolderPageProps) {
+    const resolvedParams = await params;
+    const folderPath = (resolvedParams?.folder ?? []).join('/');
 
     if (!folderPath) {
         return (
