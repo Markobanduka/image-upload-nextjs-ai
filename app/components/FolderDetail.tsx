@@ -37,6 +37,7 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
     const [touchStartX, setTouchStartX] = useState<number | null>(null);
     const [touchEndX, setTouchEndX] = useState<number | null>(null);
+    const [isImageLoading, setIsImageLoading] = useState(false);
     const router = useRouter();
 
     const loadFolder = useCallback(async () => {
@@ -205,6 +206,7 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
 
     const openLightbox = useCallback((index: number) => {
         setLightboxIndex(index);
+        setIsImageLoading(false);
     }, []);
 
     const closeLightbox = useCallback(() => {
@@ -215,6 +217,7 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
 
     const showNextImage = useCallback(() => {
         if (!folder) return;
+        setIsImageLoading(true);
         setLightboxIndex((current) => {
             if (current === null) return null;
             return (current + 1) % folder.files.length;
@@ -223,6 +226,7 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
 
     const showPrevImage = useCallback(() => {
         if (!folder) return;
+        setIsImageLoading(true);
         setLightboxIndex((current) => {
             if (current === null) return null;
             return (current - 1 + folder.files.length) % folder.files.length;
@@ -504,7 +508,38 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                                 fill
                                 style={{ objectFit: 'contain', borderRadius: '0.5rem' }}
                                 onClick={(event) => event.stopPropagation()}
+                                onLoad={() => setIsImageLoading(false)}
+                                onError={() => setIsImageLoading(false)}
                             />
+                            {isImageLoading && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'rgba(0,0,0,0.7)',
+                                        borderRadius: '0.5rem',
+                                        zIndex: 1002,
+                                    }}
+                                >
+                                    <div style={{ textAlign: 'center', color: '#fff' }}>
+                                        <div
+                                            style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                border: '4px solid #f3f3f3',
+                                                borderTop: '4px solid #0070f3',
+                                                borderRadius: '50%',
+                                                animation: 'spin 1s linear infinite',
+                                                margin: '0 auto 1rem',
+                                            }}
+                                        ></div>
+                                        <p>Loading...</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <p style={{ color: '#fff', marginTop: '1rem' }}>{currentLightboxFile.name}</p>
                     </div>
