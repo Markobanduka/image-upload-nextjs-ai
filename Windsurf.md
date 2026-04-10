@@ -40,6 +40,8 @@ This document will serve as a record for all images and videos uploaded to the r
   - Delete individual files with a button.
   - Rename folder with input and confirm button.
   - Navigate back to parent folder.
+  - Navigate back to the home page with a dedicated button.
+  - Add pictures and videos directly to the current folder.
   - Breadcrumb navigation for folder hierarchy.
 
 - `app/components/AllImagesView.tsx`
@@ -61,7 +63,7 @@ This document will serve as a record for all images and videos uploaded to the r
 
 - `/` - Homepage with upload panel and folder overview
 - `/folder` - All images view showing files from all folders
-- `/folder/{folderPath}` - Folder detail page with file management
+- `/folder/{folderPath}` - Folder detail page with file management, plus home navigation and direct upload to that folder
 
 ## Features
 

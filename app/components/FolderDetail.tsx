@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import UploadPanel from './UploadPanel';
 
 interface AssetFile {
     name: string;
@@ -29,6 +30,7 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [newFolderName, setNewFolderName] = useState('');
+    const [showUploadPanel, setShowUploadPanel] = useState(false);
     const router = useRouter();
 
     const loadFolder = useCallback(async () => {
@@ -112,6 +114,11 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
         }
     };
 
+    const handleFolderUploadComplete = async () => {
+        await loadFolder();
+        setMessage('Files uploaded to this folder.');
+    };
+
     const parentPath = folderPath.split('/').slice(0, -1).join('/');
 
     return (
@@ -148,6 +155,12 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
             </div>
 
             <div style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <Link href="/" style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid #888', background: '#fff', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
+                    Back to home
+                </Link>
+                <button type="button" onClick={() => setShowUploadPanel((prev) => !prev)} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid #888', background: '#fff', cursor: 'pointer' }}>
+                    {showUploadPanel ? 'Hide uploader' : 'Add files to this folder'}
+                </button>
                 <button type="button" onClick={loadFolder} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid #888', background: '#fff', cursor: 'pointer' }}>
                     Refresh
                 </button>
@@ -163,6 +176,13 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                     </button>
                 </div>
             </div>
+
+            {showUploadPanel && (
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '0.75rem', background: '#fafafa' }}>
+                    <h3 style={{ marginTop: 0 }}>Upload to {folderPath}</h3>
+                    <UploadPanel defaultFolder={folderPath} hideFolderField onUploadComplete={handleFolderUploadComplete} />
+                </div>
+            )}
 
             {message && <p style={{ color: '#0a0' }}>{message}</p>}
             {error && <p style={{ color: '#d00' }}>{error}</p>}

@@ -5,15 +5,17 @@ import { useDropzone } from 'react-dropzone';
 
 interface UploadPanelProps {
     onUploadComplete?: () => void;
+    defaultFolder?: string;
+    hideFolderField?: boolean;
 }
 
 const validateFolderName = (folder: string) => {
-    return /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(folder.trim());
+    return /^[A-Za-z0-9 _./-]+$/.test(folder.trim());
 };
 
-export default function UploadPanel({ onUploadComplete }: UploadPanelProps) {
+export default function UploadPanel({ onUploadComplete, defaultFolder, hideFolderField = false }: UploadPanelProps) {
     const [files, setFiles] = useState<File[]>([]);
-    const [folder, setFolder] = useState('');
+    const [folder, setFolder] = useState(defaultFolder ?? '');
     const [status, setStatus] = useState('');
     const [error, setError] = useState('');
 
@@ -78,13 +80,20 @@ export default function UploadPanel({ onUploadComplete }: UploadPanelProps) {
                 <label htmlFor="folder" style={{ display: 'block', marginBottom: '0.5rem' }}>
                     Folder name
                 </label>
-                <input
-                    id="folder"
-                    value={folder}
-                    onChange={(event) => setFolder(event.target.value)}
-                    placeholder="Example: windsurf/2026"
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ccc' }}
-                />
+                {hideFolderField && defaultFolder ? (
+                    <div style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ccc', background: '#f7f7f7' }}>
+                        {defaultFolder}
+                    </div>
+                ) : (
+                    <input
+                        id="folder"
+                        value={folder}
+                        onChange={(event) => setFolder(event.target.value)}
+                        placeholder="Example: windsurf/2026"
+                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #ccc' }}
+                        readOnly={!!defaultFolder}
+                    />
+                )}
             </div>
             <div
                 {...getRootProps()}
