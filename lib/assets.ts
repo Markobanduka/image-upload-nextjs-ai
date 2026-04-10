@@ -1,6 +1,6 @@
 import path from 'path';
-import { mkdir, readdir, stat, unlink, rename as fsRename } from 'fs/promises';
-import { deleteFileFromGitHub } from './github';
+import { mkdir, readdir, stat, unlink, rename as fsRename, readFile, rmdir } from 'fs/promises';
+import { deleteFileFromGitHub, uploadFileToGitHub, deleteFolderFromGitHub } from './github';
 
 export const assetRoot = path.join(process.cwd(), 'public', 'assets');
 
@@ -9,8 +9,8 @@ export function sanitizeFolderName(folder: string) {
     if (!cleaned) {
         throw new Error('Folder name is required.');
     }
-    if (/\.\.|[^A-Za-z0-9 _./-]/.test(cleaned)) {
-        throw new Error('Folder name may only contain letters, numbers, spaces, dashes, underscores, dots, and "/".');
+    if (/\.\.|[^A-Za-z0-9 _./()\-]/.test(cleaned)) {
+        throw new Error('Folder name may only contain letters, numbers, spaces, dashes, underscores, dots, parentheses, and "/".');
     }
     return cleaned;
 }
@@ -20,8 +20,8 @@ export function sanitizeAssetPath(assetPath: string) {
     if (!cleaned) {
         throw new Error('Path is required.');
     }
-    if (/\.\.|[^A-Za-z0-9 _./-]/.test(cleaned)) {
-        throw new Error('Path may only contain letters, numbers, spaces, dots, dashes, underscores, slashes, and file extensions.');
+    if (/\.\.|[^A-Za-z0-9 _./()\-]/.test(cleaned)) {
+        throw new Error('Path may only contain letters, numbers, spaces, dots, dashes, underscores, parentheses, slashes, and file extensions.');
     }
     return cleaned;
 }
@@ -143,6 +143,69 @@ export async function deleteAssetFile(relativeFilePath: string) {
         console.warn('Failed to delete from GitHub:', githubError);
         // Don't throw error for GitHub failure, as local delete succeeded
     }
+}
+
+export async function moveAssetFile(oldRelativeFilePath: string, destinationFolder: string) {
+    const cleanedOldPath = sanitizeAssetPath(oldRelativeFilePath);
+    const cleanedDestinationFolder = sanitizeFolderName(destinationFolder);
+    const fileName = path.basename(cleanedOldPath);
+    const oldFullPath = path.join(assetRoot, cleanedOldPath);
+    const newRelativePath = `${cleanedDestinationFolder}/${fileName}`;
+    const newFullPath = path.join(assetRoot, newRelativePath);
+
+    await mkdir(path.dirname(newFullPath), { recursive: true });
+    await fsRename(oldFullPath, newFullPath);
+
+    // Also move on GitHub by copying the file and deleting the original
+    try {
+        const fileContent = await readFile(newFullPath);
+        await uploadFileToGitHub(newRelativePath, fileContent);
+        await deleteFileFromGitHub(cleanedOldPath);
+    } catch (githubError) {
+        console.warn('Failed to move file on GitHub:', githubError);
+    }
+}
+
+export async function deleteAssetFolder(relativePath: string) {
+    const cleanedPath = sanitizeFolderName(relativePath);
+    const fullPath = path.join(assetRoot, cleanedPath);
+    
+    // Check if folder exists
+    try {
+        const stats = await stat(fullPath);
+        if (!stats.isDirectory()) {
+            throw new Error('Path is not a folder.');
+        }
+    } catch {
+        throw new Error('Folder does not exist.');
+    }
+
+    // Recursively delete all files and subfolders
+    await deleteFolderRecursively(fullPath);
+
+    // Also delete from GitHub
+    try {
+        await deleteFolderFromGitHub(cleanedPath);
+    } catch (githubError) {
+        console.warn('Failed to delete folder from GitHub:', githubError);
+        // Don't throw error for GitHub failure, as local delete succeeded
+    }
+}
+
+async function deleteFolderRecursively(folderPath: string) {
+    const entries = await readdir(folderPath, { withFileTypes: true });
+    
+    for (const entry of entries) {
+        const fullPath = path.join(folderPath, entry.name);
+        
+        if (entry.isDirectory()) {
+            await deleteFolderRecursively(fullPath);
+        } else {
+            await unlink(fullPath);
+        }
+    }
+    
+    await rmdir(folderPath);
 }
 
 export async function renameAssetFolder(oldRelativePath: string, newFolderName: string) {

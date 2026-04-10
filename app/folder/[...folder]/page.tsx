@@ -27,7 +27,7 @@ export default async function FolderPage({ params }: FolderPageProps) {
     return (
         <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem' }}>
             <header style={{ marginBottom: '2rem' }}>
-                <h1>Folder: {folderPath}</h1>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 700, margin: 0 }}>{folderPath}</h1>
             </header>
             <FolderDetail folderPath={folderPath} />
         </main>

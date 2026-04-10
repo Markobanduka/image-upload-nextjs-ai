@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteAssetFile, getFolderDetail, renameAssetFolder } from '@/lib/assets';
+import { deleteAssetFile, getFolderDetail, moveAssetFile, renameAssetFolder } from '@/lib/assets';
 
 export async function GET(request: NextRequest) {
     const folderPath = request.nextUrl.searchParams.get('path') ?? '';
@@ -28,6 +28,24 @@ export async function DELETE(request: NextRequest) {
     } catch (error) {
         console.error('File deletion failed:', error);
         return NextResponse.json({ error: (error as Error).message || 'Unable to delete file.' }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    const body = await request.json();
+    const oldFilePath = body?.oldFilePath;
+    const destinationFolder = body?.destinationFolder;
+
+    if (!oldFilePath || !destinationFolder) {
+        return NextResponse.json({ error: 'Old file path and destination folder are required.' }, { status: 400 });
+    }
+
+    try {
+        await moveAssetFile(oldFilePath, destinationFolder);
+        return NextResponse.json({ message: 'File moved successfully.' });
+    } catch (error) {
+        console.error('File move failed:', error);
+        return NextResponse.json({ error: (error as Error).message || 'Unable to move file.' }, { status: 500 });
     }
 }
 

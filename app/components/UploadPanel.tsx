@@ -105,7 +105,7 @@ export default function UploadPanel({ onUploadComplete, defaultFolder, hideFolde
             </div>
             <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 <button type="button" onClick={saveImages} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', background: '#0070f3', color: '#fff', cursor: 'pointer' }}>
-                    Save Images
+                    Save
                 </button>
                 {status && <span style={{ color: '#0a0' }}>{status}</span>}
                 {error && <span style={{ color: '#d00' }}>{error}</span>}

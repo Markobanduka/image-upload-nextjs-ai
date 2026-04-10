@@ -38,6 +38,7 @@ This document will serve as a record for all images and videos uploaded to the r
   - Displays folder contents (files and subfolders).
   - Shows file thumbnails for images.
   - Delete individual files with a button.
+  - Move files to another folder using a blue Move button.
   - Rename folder with input and confirm button.
   - Navigate back to parent folder.
   - Navigate back to the home page with a dedicated button.

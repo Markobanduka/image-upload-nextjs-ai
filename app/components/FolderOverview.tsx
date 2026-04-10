@@ -51,11 +51,37 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
         loadFolders();
     }, [refreshKey]);
 
+    const deleteFolder = async (folderPath: string) => {
+        if (!confirm(`Are you sure you want to delete the folder "${folderPath}" and all its contents? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/folders', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ folderPath }),
+            });
+
+            if (response.ok) {
+                loadFolders(); // Refresh the list
+            } else {
+                const result = await response.json();
+                alert(`Failed to delete folder: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Delete folder error:', error);
+            alert('Failed to delete folder');
+        }
+    };
+
     return (
         <section>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div>
-                    <h2>Folders</h2>
+                    <h2 style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>Folders</h2>
                 </div>
                 <button type="button" onClick={loadFolders} style={{ padding: '0.6rem 1rem', borderRadius: '0.5rem', border: '1px solid #888', background: '#fff', cursor: 'pointer' }}>
                     Refresh
@@ -66,7 +92,27 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
             {!isLoading && folders.length === 0 && <p>No folders created yet.</p>}
             <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
                 {folders.map((folder) => (
-                    <div key={folder.path} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem' }}>
+                    <div key={folder.path} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem', position: 'relative' }}>
+                        <button
+                            type="button"
+                            onClick={() => deleteFolder(folder.path)}
+                            style={{
+                                position: 'absolute',
+                                top: '0.5rem',
+                                right: '0.5rem',
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '0.25rem',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                zIndex: 1
+                            }}
+                            title="Delete folder"
+                        >
+                            ✕
+                        </button>
                         <Link href={encodeURI(`/folder/${folder.path}`)} style={{ display: 'flex', textDecoration: 'none', color: 'inherit' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 {folder.preview ? (
@@ -89,17 +135,6 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
                                     {folder.subfolders.map((subfolder) => (
                                         <li key={subfolder.path}>{subfolder.name} ({subfolder.fileCount})</li>
                                     ))}
-                                </ul>
-                            </div>
-                        )}
-                        {folder.files.length > 0 && (
-                            <div style={{ marginTop: '0.75rem' }}>
-                                <strong>Files</strong>
-                                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1rem' }}>
-                                    {folder.files.slice(0, 5).map((file) => (
-                                        <li key={file.url}>{file.name}</li>
-                                    ))}
-                                    {folder.files.length > 5 && <li>and {folder.files.length - 5} more...</li>}
                                 </ul>
                             </div>
                         )}

@@ -71,3 +71,39 @@ export async function uploadFileToGitHub(filePath: string, content: Buffer) {
         throw new Error('Failed to upload file to GitHub');
     }
 }
+
+export async function deleteFolderFromGitHub(folderPath: string) {
+    try {
+        // Get all files in the folder recursively
+        const { data: contents } = await octokit.repos.getContent({
+            owner: OWNER,
+            repo: REPO,
+            path: `public/assets/${folderPath}`,
+        });
+
+        if (!Array.isArray(contents)) {
+            throw new Error('Path is not a directory');
+        }
+
+        // Delete all files in the folder
+        for (const item of contents) {
+            if (item.type === 'file') {
+                await octokit.repos.deleteFile({
+                    owner: OWNER,
+                    repo: REPO,
+                    path: item.path,
+                    message: `Delete file: ${item.path}`,
+                    sha: item.sha,
+                });
+            } else if (item.type === 'dir') {
+                // Recursively delete subfolders
+                await deleteFolderFromGitHub(item.path.replace('public/assets/', ''));
+            }
+        }
+
+        return true;
+    } catch (error) {
+        console.error('GitHub folder delete error:', error);
+        throw new Error('Failed to delete folder from GitHub');
+    }
+}

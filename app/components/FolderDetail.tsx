@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { type TouchEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -31,6 +31,12 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
     const [message, setMessage] = useState('');
     const [newFolderName, setNewFolderName] = useState('');
     const [showUploadPanel, setShowUploadPanel] = useState(false);
+    const [moveFileName, setMoveFileName] = useState<string | null>(null);
+    const [destinationFolders, setDestinationFolders] = useState<string[]>([]);
+    const [isMoving, setIsMoving] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [touchStartX, setTouchStartX] = useState<number | null>(null);
+    const [touchEndX, setTouchEndX] = useState<number | null>(null);
     const router = useRouter();
 
     const loadFolder = useCallback(async () => {
@@ -119,32 +125,158 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
         setMessage('Files uploaded to this folder.');
     };
 
+    const flattenFolderPaths = useCallback((folders: AssetFolder[], currentPath = ''): string[] => {
+        let paths: string[] = [];
+        for (const folderItem of folders) {
+            const folderPathValue = currentPath ? `${currentPath}/${folderItem.name}` : folderItem.name;
+            paths.push(folderPathValue);
+            paths = paths.concat(flattenFolderPaths(folderItem.subfolders, folderPathValue));
+        }
+        return paths;
+    }, []);
+
+    const loadDestinationFolders = async () => {
+        if (destinationFolders.length > 0) {
+            return;
+        }
+
+        try {
+            setIsMoving(true);
+            setError('');
+            const response = await fetch('/api/folders');
+            const result = await response.json();
+            if (response.ok) {
+                const paths = flattenFolderPaths(result.folders || []);
+                setDestinationFolders(paths.filter((path) => path !== folderPath));
+            } else {
+                setError(result.error || 'Unable to load folders.');
+            }
+        } catch (fetchError) {
+            setError('Unable to load folders.');
+            console.error(fetchError);
+        } finally {
+            setIsMoving(false);
+        }
+    };
+
+    const openMoveMenu = async (fileName: string) => {
+        setMoveFileName(fileName);
+        await loadDestinationFolders();
+    };
+
+    const closeMoveMenu = () => {
+        setMoveFileName(null);
+    };
+
+    const moveFileToFolder = async (destinationFolder: string) => {
+        if (!moveFileName) return;
+
+        setError('');
+        setMessage('');
+        setIsMoving(true);
+
+        try {
+            const response = await fetch('/api/folder', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    oldFilePath: `${folderPath}/${moveFileName}`,
+                    destinationFolder,
+                }),
+            });
+            const result = await response.json();
+            if (response.ok) {
+                setMessage(result.message || `Moved ${moveFileName} to ${destinationFolder}.`);
+                setMoveFileName(null);
+                setDestinationFolders([]);
+                await loadFolder();
+            } else {
+                setError(result.error || 'Unable to move file.');
+            }
+        } catch (moveError) {
+            setError('Unable to move file.');
+            console.error(moveError);
+        } finally {
+            setIsMoving(false);
+        }
+    };
+
+    const openLightbox = useCallback((index: number) => {
+        setLightboxIndex(index);
+    }, []);
+
+    const closeLightbox = useCallback(() => {
+        setLightboxIndex(null);
+        setTouchStartX(null);
+        setTouchEndX(null);
+    }, []);
+
+    const showNextImage = useCallback(() => {
+        if (!folder) return;
+        setLightboxIndex((current) => {
+            if (current === null) return null;
+            return (current + 1) % folder.files.length;
+        });
+    }, [folder]);
+
+    const showPrevImage = useCallback(() => {
+        if (!folder) return;
+        setLightboxIndex((current) => {
+            if (current === null) return null;
+            return (current - 1 + folder.files.length) % folder.files.length;
+        });
+    }, [folder]);
+
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+        if (lightboxIndex === null) return;
+        if (event.key === 'Escape') {
+            closeLightbox();
+        }
+        if (event.key === 'ArrowRight') {
+            showNextImage();
+        }
+        if (event.key === 'ArrowLeft') {
+            showPrevImage();
+        }
+    }, [lightboxIndex, closeLightbox, showNextImage, showPrevImage]);
+
+    useEffect(() => {
+        if (lightboxIndex !== null) {
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [lightboxIndex, handleKeyDown]);
+
+    const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+        setTouchStartX(event.touches[0]?.clientX ?? null);
+    };
+
+    const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+        setTouchEndX(event.touches[0]?.clientX ?? null);
+    };
+
+    const handleTouchEnd = () => {
+        if (touchStartX === null || touchEndX === null) return;
+        const distance = touchStartX - touchEndX;
+        if (Math.abs(distance) > 50) {
+            if (distance > 0) {
+                showNextImage();
+            } else {
+                showPrevImage();
+            }
+        }
+        setTouchStartX(null);
+        setTouchEndX(null);
+    };
+
     const parentPath = folderPath.split('/').slice(0, -1).join('/');
+    const currentLightboxFile = folder && lightboxIndex !== null ? folder.files[lightboxIndex] : null;
 
     return (
         <section>
             <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div>
-                    <p style={{ margin: 0, color: '#555' }}>
-                        Path:{' '}
-                        {folderPath.split('/').map((segment, index) => {
-                            const isLast = index === folderPath.split('/').length - 1;
-                            const segmentPath = folderPath.split('/').slice(0, index + 1).join('/');
-                            return (
-                                <span key={segmentPath}>
-                                    {!isLast ? (
-                                        <Link href={encodeURI(`/folder/${segmentPath}`)} style={{ color: '#0070f3', textDecoration: 'underline' }}>
-                                            {segment}
-                                        </Link>
-                                    ) : (
-                                        <strong>{segment}</strong>
-                                    )}
-                                    {!isLast && ' / '}
-                                </span>
-                            );
-                        })}
-                    </p>
-                </div>
                 <div>
                     {parentPath && (
                         <Link href={encodeURI(`/folder/${parentPath}`)} style={{ color: '#0070f3', textDecoration: 'underline' }}>
@@ -213,9 +345,16 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                             <p>No files in this folder.</p>
                         ) : (
                             <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-                                {folder.files.map((file) => (
+                                {folder.files.map((file, index) => (
                                     <div key={file.url} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem' }}>
-                                        <div style={{ marginBottom: '0.75rem' }}>
+                                        <div
+                                            style={{ marginBottom: '0.75rem', cursor: file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i) ? 'pointer' : 'default' }}
+                                            onClick={() => {
+                                                if (file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i)) {
+                                                    openLightbox(index);
+                                                }
+                                            }}
+                                        >
                                             {file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i) ? (
                                                 <Image src={file.url} alt={file.name} width={280} height={180} style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', objectFit: 'cover' }} />
                                             ) : (
@@ -224,16 +363,150 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                                                 </div>
                                             )}
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span>{file.name}</span>
-                                            <button type="button" onClick={() => deleteFile(file.name)} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', background: '#d00', color: '#fff', cursor: 'pointer' }}>
-                                                Delete
-                                            </button>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                <button type="button" onClick={() => openMoveMenu(file.name)} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #0070f3', background: '#0070f3', color: '#fff', cursor: 'pointer' }}>
+                                                    Move
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (confirm(`Delete ${file.name}? Are you sure?`)) {
+                                                            deleteFile(file.name);
+                                                        }
+                                                    }}
+                                                    style={{ padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: 'none', background: '#d00', color: '#fff', cursor: 'pointer' }}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </div>
+                                        {moveFileName === file.name && (
+                                            <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#eef4ff', borderRadius: '0.5rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                    <strong>Select destination folder</strong>
+                                                    <button type="button" onClick={closeMoveMenu} style={{ padding: '0.35rem 0.6rem', borderRadius: '0.5rem', border: '1px solid #888', background: '#fff', cursor: 'pointer' }}>
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                                {destinationFolders.length === 0 ? (
+                                                    <p style={{ margin: 0, color: '#555' }}>{isMoving ? 'Loading folders...' : 'No other folders available.'}</p>
+                                                ) : (
+                                                    <div style={{ display: 'grid', gap: '0.5rem' }}>
+                                                        {destinationFolders.map((destinationFolder) => (
+                                                            <button
+                                                                key={destinationFolder}
+                                                                type="button"
+                                                                onClick={() => moveFileToFolder(destinationFolder)}
+                                                                style={{ textAlign: 'left', padding: '0.6rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #0070f3', background: '#fff', color: '#0070f3', cursor: 'pointer' }}
+                                                            >
+                                                                {destinationFolder}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {currentLightboxFile && (
+                <div
+                    onClick={closeLightbox}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1000,
+                        background: 'rgba(0,0,0,0.9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem',
+                    }}
+                >
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            closeLightbox();
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: '1rem',
+                            right: '1rem',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: 'none',
+                            background: '#fff',
+                            color: '#000',
+                            cursor: 'pointer',
+                            zIndex: 1001,
+                        }}
+                    >
+                        Close
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            showPrevImage();
+                        }}
+                        style={{
+                            position: 'absolute',
+                            left: '1rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: 'none',
+                            background: '#fff',
+                            color: '#000',
+                            cursor: 'pointer',
+                            zIndex: 1001,
+                        }}
+                    >
+                        ‹
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            showNextImage();
+                        }}
+                        style={{
+                            position: 'absolute',
+                            right: '1rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '0.5rem',
+                            border: 'none',
+                            background: '#fff',
+                            color: '#000',
+                            cursor: 'pointer',
+                            zIndex: 1001,
+                        }}
+                    >
+                        ›
+                    </button>
+                    <div style={{ maxWidth: '100%', maxHeight: '100%', width: '100%', textAlign: 'center' }}>
+                        <div style={{ position: 'relative', width: '100%', height: '80vh', margin: '0 auto' }}>
+                            <Image
+                                src={currentLightboxFile.url}
+                                alt={currentLightboxFile.name}
+                                fill
+                                style={{ objectFit: 'contain', borderRadius: '0.5rem' }}
+                                onClick={(event) => event.stopPropagation()}
+                            />
+                        </div>
+                        <p style={{ color: '#fff', marginTop: '1rem' }}>{currentLightboxFile.name}</p>
                     </div>
                 </div>
             )}
