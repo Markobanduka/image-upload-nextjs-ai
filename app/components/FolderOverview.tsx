@@ -25,6 +25,7 @@ interface FolderOverviewProps {
 export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) {
     const [folders, setFolders] = useState<FolderSummary[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [deletingFolder, setDeletingFolder] = useState<string | null>(null);
     const [error, setError] = useState('');
 
     const loadFolders = async () => {
@@ -56,6 +57,8 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
             return;
         }
 
+        setDeletingFolder(folderPath);
+
         try {
             const response = await fetch('/api/folders', {
                 method: 'DELETE',
@@ -66,7 +69,7 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
             });
 
             if (response.ok) {
-                loadFolders(); // Refresh the list
+                await loadFolders(); // Refresh the list
             } else {
                 const result = await response.json();
                 alert(`Failed to delete folder: ${result.error}`);
@@ -74,6 +77,8 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
         } catch (error) {
             console.error('Delete folder error:', error);
             alert('Failed to delete folder');
+        } finally {
+            setDeletingFolder(null);
         }
     };
 
@@ -92,26 +97,28 @@ export default function FolderOverview({ refreshKey = 0 }: FolderOverviewProps) 
             {!isLoading && folders.length === 0 && <p>No folders created yet.</p>}
             <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
                 {folders.map((folder) => (
-                    <div key={folder.path} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem', position: 'relative' }}>
+                    <div key={folder.path} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem', position: 'relative', opacity: deletingFolder === folder.path ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                         <button
                             type="button"
                             onClick={() => deleteFolder(folder.path)}
+                            disabled={deletingFolder === folder.path}
                             style={{
                                 position: 'absolute',
                                 top: '0.5rem',
                                 right: '0.5rem',
-                                background: '#ef4444',
+                                background: deletingFolder === folder.path ? '#ccc' : '#ef4444',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '0.25rem',
                                 padding: '0.25rem 0.5rem',
                                 fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                zIndex: 1
+                                cursor: deletingFolder === folder.path ? 'not-allowed' : 'pointer',
+                                zIndex: 1,
+                                transition: 'background 0.2s',
                             }}
                             title="Delete folder"
                         >
-                            ✕
+                            {deletingFolder === folder.path ? '⏳ Deleting...' : '✕'}
                         </button>
                         <Link href={encodeURI(`/folder/${folder.path}`)} style={{ display: 'flex', textDecoration: 'none', color: 'inherit' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

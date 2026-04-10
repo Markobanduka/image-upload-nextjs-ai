@@ -52,7 +52,7 @@ export interface AssetFolder {
 }
 
 function isAssetFile(filename: string) {
-    return /\.(jpe?g|png|gif|webp|avif|svg|mp4|mov|avi)$/i.test(filename);
+    return /\.(jpe?g|png|gif|webp|avif|svg|mp4|mov|avi|m4v)$/i.test(filename);
 }
 
 function isImageFile(filename: string) {

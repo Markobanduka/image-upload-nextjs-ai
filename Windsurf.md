@@ -18,7 +18,7 @@ This document will serve as a record for all images and videos uploaded to the r
 - Files are automatically synced to GitHub repository.
 - The homepage displays all folders with preview images and item counts.
 - Individual folders can be viewed and managed at `/folder/{folderPath}`.
-- All images view available at `/folder` (no path).
+- Supports `.m4v` video files as well as standard image formats.
 
 ## Components
 
@@ -44,9 +44,7 @@ This document will serve as a record for all images and videos uploaded to the r
   - Navigate back to the home page with a dedicated button.
   - Add pictures and videos directly to the current folder.
   - Breadcrumb navigation for folder hierarchy.
-
-- `app/components/AllImagesView.tsx`
-  - Displays all images and videos across all folders.
+- Full-screen video viewer includes play/pause and adjustable volume.
   - Includes upload functionality directly on the page.
   - Shows file previews, folder information, and delete buttons.
   - Supports both images and videos with appropriate previews.

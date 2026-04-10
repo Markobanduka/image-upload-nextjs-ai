@@ -89,17 +89,17 @@ export default function AllImagesView({}: AllImagesViewProps) {
                 <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                     {allFiles.map((file) => (
                         <div key={file.url} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem' }}>
-                            <div style={{ marginBottom: '0.75rem' }}>
+                            <div style={{ marginBottom: '0.75rem', position: 'relative', width: '100%', height: '200px', borderRadius: '0.5rem', overflow: 'hidden', background: '#f0f0f0' }}>
                                 {file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i) ? (
-                                    <Image src={file.url} alt={file.name} width={280} height={180} style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', objectFit: 'cover' }} />
-                                ) : file.url.match(/\.(mp4|mov|avi)$/i) ? (
-                                    <video width="280" height="180" controls style={{ width: '100%', height: 'auto', borderRadius: '0.5rem' }}>
+                                    <Image src={file.url} alt={file.name} fill style={{ objectFit: 'cover' }} />
+                                ) : file.url.match(/\.(mp4|mov|avi|webm|m4v)$/i) ? (
+                                    <video controls style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}>
                                         <source src={file.url} type="video/mp4" />
                                         Your browser does not support the video tag.
                                     </video>
                                 ) : (
-                                    <div style={{ padding: '2rem', background: '#f7f7f7', borderRadius: '0.5rem' }}>
-                                        <p style={{ margin: 0 }}>No preview available</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', background: '#f0f0f0' }}>
+                                        <p style={{ margin: 0, color: '#999' }}>No preview</p>
                                     </div>
                                 )}
                             </div>

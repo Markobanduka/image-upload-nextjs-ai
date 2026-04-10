@@ -1,6 +1,6 @@
 'use client';
 
-import { type TouchEvent, useCallback, useEffect, useState } from 'react';
+import { type TouchEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -37,8 +37,14 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
     const [touchStartX, setTouchStartX] = useState<number | null>(null);
     const [touchEndX, setTouchEndX] = useState<number | null>(null);
-    const [isImageLoading, setIsImageLoading] = useState(false);
+    const [isMediaLoading, setIsMediaLoading] = useState(false);
+    const [videoPlaying, setVideoPlaying] = useState(false);
+    const [volume, setVolume] = useState(1);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
     const router = useRouter();
+
+    const isImageFile = (url: string) => /\.(jpe?g|png|gif|webp|avif|svg)$/i.test(url);
+    const isVideoFile = (url: string) => /\.(mp4|mov|avi|webm|m4v)$/i.test(url);
 
     const loadFolder = useCallback(async () => {
         setIsLoading(true);
@@ -64,6 +70,12 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
     useEffect(() => {
         loadFolder();
     }, [loadFolder]);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.volume = volume;
+        }
+    }, [volume]);
 
     const deleteFile = async (fileName: string) => {
         setError('');
@@ -206,7 +218,8 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
 
     const openLightbox = useCallback((index: number) => {
         setLightboxIndex(index);
-        setIsImageLoading(false);
+        setVideoPlaying(false);
+        setIsMediaLoading(true);
     }, []);
 
     const closeLightbox = useCallback(() => {
@@ -217,7 +230,8 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
 
     const showNextImage = useCallback(() => {
         if (!folder) return;
-        setIsImageLoading(true);
+        setVideoPlaying(false);
+        setIsMediaLoading(true);
         setLightboxIndex((current) => {
             if (current === null) return null;
             return (current + 1) % folder.files.length;
@@ -226,7 +240,8 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
 
     const showPrevImage = useCallback(() => {
         if (!folder) return;
-        setIsImageLoading(true);
+        setVideoPlaying(false);
+        setIsMediaLoading(true);
         setLightboxIndex((current) => {
             if (current === null) return null;
             return (current - 1 + folder.files.length) % folder.files.length;
@@ -351,19 +366,45 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                             <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
                                 {folder.files.map((file, index) => (
                                     <div key={file.url} style={{ border: '1px solid #ddd', borderRadius: '0.75rem', padding: '1rem' }}>
-                                        <div
-                                            style={{ marginBottom: '0.75rem', cursor: file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i) ? 'pointer' : 'default' }}
-                                            onClick={() => {
-                                                if (file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i)) {
-                                                    openLightbox(index);
-                                                }
-                                            }}
-                                        >
-                                            {file.url.match(/\.(jpe?g|png|gif|webp|avif|svg)$/i) ? (
-                                                <Image src={file.url} alt={file.name} width={280} height={180} style={{ width: '100%', height: 'auto', borderRadius: '0.5rem', objectFit: 'cover' }} />
+                                        <div style={{ marginBottom: '0.75rem' }}>
+                                            {isImageFile(file.url) ? (
+                                                <div
+                                                    style={{ cursor: 'pointer', position: 'relative', width: '100%', height: '200px', borderRadius: '0.5rem', overflow: 'hidden', background: '#f0f0f0' }}
+                                                    onClick={() => openLightbox(index)}
+                                                >
+                                                    <Image src={file.url} alt={file.name} fill style={{ objectFit: 'cover' }} />
+                                                </div>
+                                            ) : isVideoFile(file.url) ? (
+                                                <div style={{ position: 'relative', width: '100%', height: '200px', borderRadius: '0.5rem', overflow: 'hidden', background: '#000' }}>
+                                                    <video
+                                                        controls
+                                                        muted
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    >
+                                                        <source src={file.url} type="video/mp4" />
+                                                        Your browser does not support the video tag.
+                                                    </video>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openLightbox(index)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            bottom: '0.75rem',
+                                                            right: '0.75rem',
+                                                            padding: '0.5rem 0.75rem',
+                                                            borderRadius: '0.5rem',
+                                                            border: 'none',
+                                                            background: 'rgba(0,0,0,0.7)',
+                                                            color: '#fff',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </div>
                                             ) : (
-                                                <div style={{ padding: '2rem', background: '#f7f7f7', borderRadius: '0.5rem' }}>
-                                                    <p style={{ margin: 0 }}>No preview available</p>
+                                                <div style={{ width: '100%', height: '200px', padding: '2rem', background: '#f7f7f7', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <p style={{ margin: 0 }}>No preview</p>
                                                 </div>
                                             )}
                                         </div>
@@ -502,16 +543,30 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                     </button>
                     <div style={{ maxWidth: '100%', maxHeight: '100%', width: '100%', textAlign: 'center' }}>
                         <div style={{ position: 'relative', width: '100%', height: '80vh', margin: '0 auto' }}>
-                            <Image
-                                src={currentLightboxFile.url}
-                                alt={currentLightboxFile.name}
-                                fill
-                                style={{ objectFit: 'contain', borderRadius: '0.5rem' }}
-                                onClick={(event) => event.stopPropagation()}
-                                onLoad={() => setIsImageLoading(false)}
-                                onError={() => setIsImageLoading(false)}
-                            />
-                            {isImageLoading && (
+                            {isVideoFile(currentLightboxFile.url) ? (
+                                <video
+                                    ref={videoRef}
+                                    src={currentLightboxFile.url}
+                                    controls
+                                    autoPlay
+                                    onLoadedData={() => setIsMediaLoading(false)}
+                                    onPlay={() => setVideoPlaying(true)}
+                                    onPause={() => setVideoPlaying(false)}
+                                    style={{ width: '100%', height: '100%', borderRadius: '0.5rem', background: '#000', objectFit: 'contain' }}
+                                    onClick={(event) => event.stopPropagation()}
+                                />
+                            ) : (
+                                <Image
+                                    src={currentLightboxFile.url}
+                                    alt={currentLightboxFile.name}
+                                    fill
+                                    style={{ objectFit: 'contain', borderRadius: '0.5rem' }}
+                                    onClick={(event) => event.stopPropagation()}
+                                    onLoad={() => setIsMediaLoading(false)}
+                                    onError={() => setIsMediaLoading(false)}
+                                />
+                            )}
+                            {isMediaLoading && (
                                 <div
                                     style={{
                                         position: 'absolute',
@@ -541,6 +596,41 @@ export default function FolderDetail({ folderPath }: FolderDetailProps) {
                                 </div>
                             )}
                         </div>
+                        {isVideoFile(currentLightboxFile.url) && (
+                            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!videoRef.current) return;
+                                        if (videoPlaying) {
+                                            videoRef.current.pause();
+                                        } else {
+                                            videoRef.current.play();
+                                        }
+                                    }}
+                                    style={{ padding: '0.6rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#0070f3', color: '#fff', cursor: 'pointer' }}
+                                >
+                                    {videoPlaying ? 'Pause' : 'Play'}
+                                </button>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff' }}>
+                                    Volume
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        value={volume}
+                                        onChange={(event) => {
+                                            const value = Number(event.target.value);
+                                            setVolume(value);
+                                            if (videoRef.current) {
+                                                videoRef.current.volume = value;
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        )}
                         <p style={{ color: '#fff', marginTop: '1rem' }}>{currentLightboxFile.name}</p>
                     </div>
                 </div>
