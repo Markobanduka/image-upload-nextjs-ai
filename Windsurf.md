@@ -11,10 +11,14 @@ This document will serve as a record for all images and videos uploaded to the r
 - Uploads are handled by `app/api/upload/route.ts`.
 - Folder listing is provided by `app/api/folders/route.ts`.
 - Folder details and file management via `app/api/folder/route.ts`.
+- All files listing via `app/api/all-files/route.ts`.
 - Folder and asset helper functions live in `lib/assets.ts`.
+- GitHub integration functions in `lib/github.ts`.
 - Uploaded files are saved in `public/assets/<folder>`.
+- Files are automatically synced to GitHub repository.
 - The homepage displays all folders with preview images and item counts.
 - Individual folders can be viewed and managed at `/folder/{folderPath}`.
+- All images view available at `/folder` (no path).
 
 ## Components
 
@@ -38,21 +42,25 @@ This document will serve as a record for all images and videos uploaded to the r
   - Navigate back to parent folder.
   - Breadcrumb navigation for folder hierarchy.
 
-- `app/components/AssetManager.tsx`
-  - Manages upload completion and folder refresh state.
-  - Coordinates between upload and folder overview.
+- `app/components/AllImagesView.tsx`
+  - Displays all images and videos across all folders.
+  - Includes upload functionality directly on the page.
+  - Shows file previews, folder information, and delete buttons.
+  - Supports both images and videos with appropriate previews.
 
 ## API Routes
 
-- `POST /api/upload` - Upload files to a specified folder
+- `POST /api/upload` - Upload files to a specified folder (syncs to GitHub)
 - `GET /api/folders` - List all folders with metadata
 - `GET /api/folder?path={folderPath}` - Get details of a specific folder
-- `DELETE /api/folder?filePath={filePath}` - Delete a file from a folder
+- `GET /api/all-files` - Get all files across all folders
+- `DELETE /api/folder?filePath={filePath}` - Delete a file from folder and GitHub
 - `PATCH /api/folder` - Rename a folder
 
 ## Pages
 
 - `/` - Homepage with upload panel and folder overview
+- `/folder` - All images view showing files from all folders
 - `/folder/{folderPath}` - Folder detail page with file management
 
 ## Features
@@ -60,10 +68,13 @@ This document will serve as a record for all images and videos uploaded to the r
 - Drag-and-drop and click-to-select file uploads
 - Organize files into named folders and subfolders
 - View all folders with previews
+- View all images/videos across all folders at `/folder`
 - Click folders to open `/folder/{name}` detail view
-- Delete individual images/videos from folders
+- Delete individual images/videos from folders (removes from local and GitHub)
 - Rename folders
 - Navigate folder hierarchy with breadcrumbs
+- GitHub integration for version control of assets
+- Automatic sync of uploads and deletions to GitHub repository
 - All files stored in repository at `/public/assets`
 
 ## Library Functions
@@ -79,6 +90,11 @@ This document will serve as a record for all images and videos uploaded to the r
 - `deleteAssetFile()` - Delete a file
 - `renameAssetFolder()` - Rename a folder
 
+`lib/github.ts` exports:
+
+- `deleteFileFromGitHub()` - Delete file from GitHub repository
+- `uploadFileToGitHub()` - Upload file to GitHub repository
+
 ## Notes
 
 - Upload requires a folder name (cannot be empty).
@@ -86,3 +102,26 @@ This document will serve as a record for all images and videos uploaded to the r
 - Images are stored in nested folders under `/public/assets`.
 - File deletion and folder renaming are instant.
 - Breadcrumb navigation helps users navigate folder hierarchy.
+- Files are automatically synced to GitHub repository on upload and deletion.
+- GitHub integration requires a personal access token in `.env.local`.
+
+## Environment Variables
+
+Create a `.env.local` file with:
+
+```env
+GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_OWNER=Markobanduka
+GITHUB_REPO=image-upload-nextjs-ai
+```
+
+## Recent Fixes & Important Notes
+
+- **Import Path Fix**: `app/folder/[...folder]/page.tsx` uses relative import `../../components/FolderDetail` instead of `@/app/components/FolderDetail` due to dynamic route nesting.
+- **Async Params Fix**: The folder page component is `async` and awaits `params` because in Next.js 13+, route parameters are Promises and must be resolved before accessing them.
+- **FolderOverview Text Removed**: Removed the description "All asset folders stored in /public/assets" from the folders section heading.
+- **Clickable Folder Cards**: Folder cards in FolderOverview are now wrapped in Next.js `Link` components, making them navigate to the folder detail page.
+- **Folder Detail Features**: Users can delete files, rename folders, and navigate the folder hierarchy using breadcrumbs from the detail page.
+- **All Images View**: Added `/folder` route to display all images and videos across all folders with upload and delete functionality.
+- **GitHub Integration**: Files are automatically synced to GitHub repository on upload and deletion using personal access token.
+- **New API Endpoint**: Added `/api/all-files` to retrieve all files across all folders for the all images view.

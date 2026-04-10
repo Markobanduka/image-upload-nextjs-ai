@@ -1,4 +1,5 @@
 import FolderDetail from '../../components/FolderDetail';
+import AllImagesView from '../../components/AllImagesView';
 
 interface FolderPageProps {
     params: {
@@ -11,9 +12,14 @@ export default async function FolderPage({ params }: FolderPageProps) {
     const folderPath = (resolvedParams?.folder ?? []).join('/');
 
     if (!folderPath) {
+        // Show all images when no folder path is provided
         return (
             <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem' }}>
-                <p>Invalid folder path.</p>
+                <header style={{ marginBottom: '2rem' }}>
+                    <h1>All Images</h1>
+                    <p>View all uploaded images and videos across all folders.</p>
+                </header>
+                <AllImagesView />
             </main>
         );
     }

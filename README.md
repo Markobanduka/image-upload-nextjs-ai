@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Image Upload and Management App
+
+A Next.js application for uploading, viewing, and managing images and videos in organized folders. Features GitHub integration for version control of uploaded assets.
+
+## Features
+
+- **Upload images and videos** to specific folders
+- **View all images** across all folders at `/folder`
+- **Browse folders** with hierarchical navigation
+- **Delete files** from both local storage and GitHub repository
+- **GitHub integration** for version control of assets
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up GitHub Integration
+
+Create a `.env.local` file in the root directory with your GitHub credentials:
+
+```env
+GITHUB_TOKEN=your_github_personal_access_token_here
+GITHUB_OWNER=Markobanduka
+GITHUB_REPO=image-upload-nextjs-ai
+```
+
+#### Getting a GitHub Personal Access Token:
+
+1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Give it a name like "Image Upload App"
+4. Select scopes: `repo` (full control of private repositories)
+5. Copy the token and paste it in `.env.local`
+
+### 3. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Main Page
 
-## Learn More
+- Upload images/videos by specifying a folder name
+- View all existing folders
 
-To learn more about Next.js, take a look at the following resources:
+### All Images View (`/folder`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- View all uploaded images and videos across all folders
+- Upload new files directly from this page
+- Delete files (removes from both local storage and GitHub)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Folder View (`/folder/folder-name`)
 
-## Deploy on Vercel
+- Browse specific folders
+- View subfolders and files
+- Delete individual files
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API Endpoints
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `GET /api/folders` - List all folders
+- `GET /api/folder?path=folder-path` - Get folder details
+- `GET /api/all-files` - Get all files across all folders
+- `POST /api/upload` - Upload files to a folder
+- `DELETE /api/folder?filePath=file-path` - Delete a file
+
+## File Structure
+
+```
+public/assets/          # Uploaded files stored here
+├── folder1/
+│   ├── image1.jpg
+│   └── image2.png
+└── folder2/
+    └── video1.mp4
+```
+
+## Technologies Used
+
+- Next.js 16
+- React 19
+- TypeScript
+- GitHub API (@octokit/rest)
+- React Dropzone

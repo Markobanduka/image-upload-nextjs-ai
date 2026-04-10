@@ -1,5 +1,6 @@
 import path from 'path';
 import { mkdir, readdir, stat, unlink, rename as fsRename } from 'fs/promises';
+import { deleteFileFromGitHub } from './github';
 
 export const assetRoot = path.join(process.cwd(), 'public', 'assets');
 
@@ -134,6 +135,14 @@ export async function deleteAssetFile(relativeFilePath: string) {
     const cleanedPath = sanitizeAssetPath(relativeFilePath);
     const fullPath = path.join(assetRoot, cleanedPath);
     await unlink(fullPath);
+
+    // Also delete from GitHub
+    try {
+        await deleteFileFromGitHub(cleanedPath);
+    } catch (githubError) {
+        console.warn('Failed to delete from GitHub:', githubError);
+        // Don't throw error for GitHub failure, as local delete succeeded
+    }
 }
 
 export async function renameAssetFolder(oldRelativePath: string, newFolderName: string) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { getUploadDirectory, sanitizeFolderName } from '@/lib/assets';
+import { getUploadDirectory } from '@/lib/assets';
+import { uploadFileToGitHub } from '@/lib/github';
 
 export async function POST(request: NextRequest) {
     const data = await request.formData();
@@ -31,6 +32,14 @@ export async function POST(request: NextRequest) {
         await writeFile(filepath, buffer);
         const relativePath = path.join(folder.trim(), filename).replace(/\\/g, '/');
         uploadedFiles.push(`/assets/${relativePath}`);
+
+        // Also upload to GitHub
+        try {
+            await uploadFileToGitHub(relativePath, buffer);
+        } catch (githubError) {
+            console.warn('Failed to upload to GitHub:', githubError);
+            // Don't fail the upload if GitHub fails
+        }
     }
 
     return NextResponse.json({ message: 'Files uploaded successfully', files: uploadedFiles });
