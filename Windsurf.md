@@ -106,16 +106,6 @@ This document will serve as a record for all images and videos uploaded to the r
 - Files are automatically synced to GitHub repository on upload and deletion.
 - GitHub integration requires a personal access token in `.env.local`.
 
-## Environment Variables
-
-Create a `.env.local` file with:
-
-```env
-GITHUB_TOKEN=your_github_personal_access_token
-GITHUB_OWNER=Markobanduka
-GITHUB_REPO=image-upload-nextjs-ai
-```
-
 ## Recent Fixes & Important Notes
 
 - **Import Path Fix**: `app/folder/[...folder]/page.tsx` uses relative import `../../components/FolderDetail` instead of `@/app/components/FolderDetail` due to dynamic route nesting.
